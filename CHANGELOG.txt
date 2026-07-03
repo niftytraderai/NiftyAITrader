@@ -1,29 +1,17 @@
-Nifty AI Trader - Changelog
+# Time between every market check (seconds)
+CHECK_INTERVAL = 60
 
-==========================
-Version 1
-==========================
-- Project setup
-- Python installed
-- VS Code setup
-- Nifty data download
-- EMA20
-- EMA50
-- RSI
+# Paper Trading Settings
+INITIAL_BALANCE = 100000
 
-==========================
-Version 2
-==========================
-- Paper Trading
-- trades.csv logging
-- Market Hours Filter
-- Modular project (data.py, strategy.py, paper_trade.py)
-- Backup created (v2.zip)
+# Risk Management
+STOP_LOSS_PERCENT = 0.5      # 0.5%
+TARGET_PERCENT = 1.0          # 1%
 
-=============================
-version 3
-=============================
-- Fixed papertrader bug
-- BUY execution working
-- stop loss & target added
-- duplicate BUY protection
+# Strategy Settings
+EMA_FAST = 20
+EMA_SLOW = 50
+RSI_PERIOD = 14
+
+RSI_BUY = 55
+RSI_SELL = 45

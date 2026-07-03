@@ -1,4 +1,5 @@
 import time
+import traceback
 
 from config import CHECK_INTERVAL
 from data import get_nifty_data
@@ -29,6 +30,8 @@ while True:
         log(f"Signal: {signal}")
         log(f"Price : {price:.2f}")
 
+        trader.check_exit(price)
+
         if signal == "BUY":
             trader.buy(price)
 
@@ -40,6 +43,7 @@ while True:
 
     except Exception as e:
         log(f"Error: {e}")
+        log(traceback.format_exc())
 
     log(f"Next check after {CHECK_INTERVAL} seconds...")
     time.sleep(CHECK_INTERVAL)
