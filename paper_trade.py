@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from logger import log
 from telegram_bot import send_telegram
-from datetime import datetime
+
 
 class PaperTrader:
     def __init__(self):
@@ -12,6 +12,7 @@ class PaperTrader:
         self.stop_loss = None
         self.target = None
         self.trade_no = 0
+        self.trailing_active = False
 
     def buy(self, price):
         if self.position is not None:
@@ -22,26 +23,39 @@ class PaperTrader:
         self.position = price
         self.stop_loss = price * 0.995
         self.target = price * 1.01
+        self.trailing_active = False
 
         log(f"BUY @ {price:.2f}")
         log(f"Stop Loss : {self.stop_loss:.2f}")
         log(f"Target    : {self.target:.2f}")
 
         self.log_trade("BUY", price, 0)
+
         send_telegram(
-    f"""🚀 NIFTY AI TRADER
+f"""
+━━━━━━━━━━━━━━━━━━━━
+🤖 NIFTY AI TRADER
+━━━━━━━━━━━━━━━━━━━━
 
 🟢 BUY SIGNAL
 
-📌 Trade No   : #{self.trade_no}
-💹 Price      : {price:.2f}
-🛑 Stop Loss  : {self.stop_loss:.2f}
-🎯 Target     : {self.target:.2f}
-💰 Balance    : ₹{self.balance:.2f}
-🕒 Time       : {datetime.now().strftime("%H:%M:%S")}
+📌 Trade No : #{self.trade_no}
+💹 Entry    : {price:.2f}
 
-🤖 Version : V4"""
-)
+🛑 Stop Loss : {self.stop_loss:.2f}
+🎯 Target    : {self.target:.2f}
+
+💰 Balance : ₹{self.balance:.2f}
+🕒 Time    : {datetime.now().strftime("%H:%M:%S")}
+
+🤖 Version : V4
+
+━━━━━━━━━━━━━━━━━━━━
+"""
+        )
+
+        log("Telegram BUY Alert Sent")
+
     def sell(self, price):
         if self.position is None:
             log("No open position")
@@ -55,21 +69,35 @@ class PaperTrader:
         log(f"Balance = {self.balance:.2f}")
 
         self.log_trade("SELL", price, profit)
+
         send_telegram(
-    f"""🚀 NIFTY AI TRADER
+f"""
+━━━━━━━━━━━━━━━━━━━━
+🤖 NIFTY AI TRADER
+━━━━━━━━━━━━━━━━━━━━
 
 🔴 SELL SIGNAL
 
-📌 Trade No   : #{self.trade_no}
-💹 Sell Price : {price:.2f}
-💵 Profit     : ₹{profit:.2f}
-💰 Balance    : ₹{self.balance:.2f}
-🕒 Time       : {datetime.now().strftime("%H:%M:%S")}
+📌 Trade No : #{self.trade_no}
+💹 Exit     : {price:.2f}
 
-🤖 Version : V4"""
-)
+💵 Profit   : ₹{profit:.2f}
+💰 Balance  : ₹{self.balance:.2f}
+
+🕒 Time     : {datetime.now().strftime("%H:%M:%S")}
+
+🤖 Version : V4
+
+━━━━━━━━━━━━━━━━━━━━
+"""
+        )
+
+        log("Telegram SELL Alert Sent")
+
         self.position = None
-
+        self.stop_loss = None
+        self.target = None
+        self.trailing_active = False
 
     def log_trade(self, action, price, profit):
         file_exists = os.path.isfile("trades.csv")
@@ -92,6 +120,22 @@ class PaperTrader:
         if self.position is None:
             return
 
+        # Activate trailing stop after 0.5% profit
+        if (not self.trailing_active) and current_price >= self.position * 1.005:
+            self.trailing_active = True
+            self.stop_loss = self.position
+            log("Trailing Stop Activated")
+            send_telegram("🔒 Trailing Stop Activated")
+
+        # Move stop loss higher as price rises
+        if self.trailing_active:
+            new_stop = current_price * 0.995
+
+            if new_stop > self.stop_loss:
+                self.stop_loss = new_stop
+                log(f"Trailing Stop Updated : {self.stop_loss:.2f}")
+
+        # Exit conditions
         if current_price <= self.stop_loss:
             log("STOP LOSS HIT")
             self.sell(current_price)
@@ -99,8 +143,6 @@ class PaperTrader:
         elif current_price >= self.target:
             log("TARGET HIT")
             self.sell(current_price)
-
-
 
     def show_summary(self):
         if not os.path.exists("trades.csv"):

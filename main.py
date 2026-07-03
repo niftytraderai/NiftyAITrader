@@ -7,6 +7,7 @@ from strategy import generate_signal
 from paper_trade import PaperTrader
 from logger import log
 from market import is_market_open
+from telegram_bot import send_telegram
 
 trader = PaperTrader()
 
@@ -29,6 +30,18 @@ while True:
 
         log(f"Signal: {signal}")
         log(f"Price : {price:.2f}")
+
+        send_telegram(
+        f"""📊 NIFTY AI SIGNAL 
+
+
+        Signal : {signal}
+
+        Price : {price:.2f}
+
+        Time : {time.strftime("%H:%M:%S")}
+        """
+        )
 
         trader.check_exit(price)
 

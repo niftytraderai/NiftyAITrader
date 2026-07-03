@@ -1,8 +1,30 @@
-# Trading Settings
+# ==========================
+# NIFTY AI TRADER SETTINGS
+# ==========================
 
+# Account
 INITIAL_BALANCE = 100000
 
+# Trading Mode
+# INDEX / FUTURES / OPTIONS
+TRADING_MODE = "INDEX"
+
+# Risk Management
 STOP_LOSS = 0.005      # 0.5%
 TARGET = 0.01          # 1%
 
-CHECK_INTERVAL = 300   # 5 minutes
+MAX_TRADES_PER_DAY = 5
+MAX_DAILY_LOSS = 500
+
+# Time Settings
+CHECK_INTERVAL = 300   # 5 Minutes
+
+# Market Time
+MARKET_OPEN = "09:15"
+MARKET_CLOSE = "15:30"
+
+# Telegram
+SEND_TELEGRAM = True
+
+# Backtesting
+BACKTEST_MODE = "INDEX"
