@@ -45,5 +45,7 @@ while True:
         log(f"Error: {e}")
         log(traceback.format_exc())
 
+    trader.show_summary()
+
     log(f"Next check after {CHECK_INTERVAL} seconds...")
     time.sleep(CHECK_INTERVAL)

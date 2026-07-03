@@ -99,3 +99,42 @@ class PaperTrader:
         elif current_price >= self.target:
             log("TARGET HIT")
             self.sell(current_price)
+
+
+
+    def show_summary(self):
+        if not os.path.exists("trades.csv"):
+            log("No trades found.")
+            return
+
+        with open("trades.csv", "r") as file:
+            reader = csv.DictReader(file)
+
+            total_trades = 0
+            wins = 0
+            losses = 0
+            total_profit = 0
+
+            for row in reader:
+                if row["Action"] == "SELL":
+                    total_trades += 1
+                    profit = float(row["Profit"])
+                    total_profit += profit
+
+                    if profit > 0:
+                        wins += 1
+                    elif profit < 0:
+                        losses += 1
+
+        win_rate = 0
+
+        if total_trades > 0:
+            win_rate = (wins / total_trades) * 100
+
+        log("========== PERFORMANCE ==========")
+        log(f"Total Trades : {total_trades}")
+        log(f"Wins         : {wins}")
+        log(f"Losses       : {losses}")
+        log(f"Win Rate     : {win_rate:.2f}%")
+        log(f"Net Profit   : ₹{total_profit:.2f}")
+        log(f"Balance      : ₹{self.balance:.2f}")
