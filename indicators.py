@@ -73,6 +73,94 @@ def add_macd(data):
 
     return data
 
+
+def add_supertrend(data, period=10, multiplier=3):
+
+    hl2 = (data["High"] + data["Low"]) / 2
+
+    atr = data["ATR"]
+
+    upperband = hl2 + (multiplier * atr)
+    lowerband = hl2 - (multiplier * atr)
+
+    data["SUPERTREND"] = upperband
+
+    trend = [True]
+
+    for i in range(1, len(data)):
+
+        if data["Close"].iloc[i] > upperband.iloc[i - 1]:
+            trend.append(True)
+
+        elif data["Close"].iloc[i] < lowerband.iloc[i - 1]:
+            trend.append(False)
+
+        else:
+            trend.append(trend[-1])
+
+    data["SUPERTREND_DIRECTION"] = trend
+
+    return data 
+
+
+def add_vwap(data):
+
+    tp = (data["High"] + data["Low"] + data["Close"]) / 3
+
+    cumulative_tp_vol = (tp * data["Volume"]).cumsum()
+    cumulative_vol = data["Volume"].replace(0, 1).cumsum()
+
+    data["VWAP"] = cumulative_tp_vol / cumulative_vol
+
+    return data 
+
+     
+def add_volume_spike(data):
+
+    data["AVG_VOLUME"] = data["Volume"].rolling(20).mean()
+
+    data["VOLUME_RATIO"] = (
+        data["Volume"] /
+        data["AVG_VOLUME"].replace(0, 1)
+    )
+
+    data["VOLUME_SPIKE"] = data["VOLUME_RATIO"] >= 1.8
+
+    return data
+
+
+def add_ai_score(data):
+
+    score = pd.Series(0.0, index=data.index)
+
+    # EMA Trend (0-25)
+    ema_gap = ((data["EMA20"] - data["EMA50"]) / data["EMA50"]) * 100
+    score += ((ema_gap.clip(0, 0.5) / 0.5) * 25)
+
+    # RSI (0-20)
+    score += (
+        ((data["RSI"] - 40).clip(0, 20) / 20) * 20
+    )
+
+    # ADX (0-20)
+    score += (
+        ((data["ADX"] - 20).clip(0, 20) / 20) * 20
+    )
+
+    # MACD (0-20)
+    score += (
+        (data["MACD"] > data["MACD_SIGNAL"]).astype(int) * 20
+    )
+
+    # SuperTrend (0-15)
+    score += (
+        data["SUPERTREND_DIRECTION"].astype(int) * 15
+    )
+
+    data["AI_SCORE"] = score.clip(0, 100).round(0)
+
+    return data
+
 def add_indicators(data):
 
     data = add_ema(data)
@@ -80,5 +168,9 @@ def add_indicators(data):
     data = add_atr(data)
     data = add_adx(data)
     data = add_macd(data)
+    data = add_supertrend(data)
+    data = add_vwap(data)
+    data = add_volume_spike(data)
+    data = add_ai_score(data)
 
     return data
