@@ -14,7 +14,7 @@ TRADE_HISTORY_FILE = "trade_history.csv"
 def prepare_trade_history():
 
     if os.path.exists(TRADE_HISTORY_FILE):
-        return
+        os.remove(TRADE_HISTORY_FILE)
 
     with open(TRADE_HISTORY_FILE, "w", newline="") as file:
 
@@ -37,7 +37,6 @@ def prepare_trade_history():
             "MACD_SIGNAL",
             "AI_SCORE"
         ])
-
 
 def save_trade(row):
 
