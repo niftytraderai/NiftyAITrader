@@ -135,7 +135,11 @@ def add_ai_score(data):
 
     # EMA Trend (0-25)
     ema_gap = ((data["EMA20"] - data["EMA50"]) / data["EMA50"]) * 100
-    score += ((ema_gap.clip(0, 0.5) / 0.5) * 25)
+
+    data["EMA_SCORE"] = ((ema_gap.clip(0, 0.5) / 0.5) * 25)
+    data["EMA_SCORE"] = data["EMA_SCORE"].clip(0, 25)
+
+    score += data["EMA_SCORE"]
 
     # RSI (0-20)
     score += (
@@ -159,7 +163,95 @@ def add_ai_score(data):
 
     data["AI_SCORE"] = score.clip(0, 100).round(0)
 
+    # ==========================
+    # CONFIDENCE SCORE
+    # ==========================
+
+    data["CONFIDENCE"] = (
+
+        data["AI_SCORE"] * 0.60 +
+
+        ((data["ADX"].clip(0, 50) / 50) * 20) +
+
+        (data["VOLUME_SPIKE"].astype(int) * 10) +
+
+        ((data["EMA_SCORE"] / 25) * 10)
+
+    ).round(0)
+
+    data["CONFIDENCE"] = data["CONFIDENCE"].clip(0, 100)
+
+    # ==========================
+    # ENTRY QUALITY
+    # ==========================
+
+    data["ENTRY_QUALITY"] = "C"
+
+    data.loc[data["AI_SCORE"] >= 60, "ENTRY_QUALITY"] = "B"
+
+    data.loc[data["AI_SCORE"] >= 70, "ENTRY_QUALITY"] = "A"
+
+    data.loc[data["AI_SCORE"] >= 85, "ENTRY_QUALITY"] = "A+"
+
+    # ==========================
+    # MARKET STATE
+    # ==========================
+
+    data["MARKET_STATE"] = "NO TRADE"
+
+    data.loc[
+        (data["AI_SCORE"] >= 60) &
+        (data["AI_SCORE"] < 70),
+        "MARKET_STATE"
+    ] = "WATCH"
+
+    data.loc[
+        data["AI_SCORE"] >= 70,
+        "MARKET_STATE"
+    ] = "TRADE"
+
+    # ==========================
+    # POSITION SIZE (%)
+    # ==========================
+
+    data["POSITION_SIZE"] = 0
+
+    data.loc[
+        data["CONFIDENCE"] >= 90,
+        "POSITION_SIZE"
+    ] = 100
+
+    data.loc[
+        (data["CONFIDENCE"] >= 80) &
+        (data["CONFIDENCE"] < 90),
+        "POSITION_SIZE"
+    ] = 75
+
+    data.loc[
+        (data["CONFIDENCE"] >= 70) &
+        (data["CONFIDENCE"] < 80),
+        "POSITION_SIZE"
+    ] = 50
+
+    data.loc[
+        (data["CONFIDENCE"] >= 60) &
+        (data["CONFIDENCE"] < 70),
+        "POSITION_SIZE"
+    ] = 25
+
     return data
+
+def add_htf_trend(data):
+
+    data["HTF_BULLISH"] = (
+        data["EMA20"] > data["EMA50"]
+    )
+
+    data["HTF_BEARISH"] = (
+        data["EMA20"] < data["EMA50"]
+    )
+
+    return data    
 
 def add_indicators(data):
 

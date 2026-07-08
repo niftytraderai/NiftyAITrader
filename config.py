@@ -28,3 +28,17 @@ SEND_TELEGRAM = True
 
 # Backtesting
 BACKTEST_MODE = "INDEX"
+
+# ==========================
+# AI STRATEGY SETTINGS
+# ==========================
+
+AI_SCORE_MIN = 70
+
+CONFIDENCE_MIN = 70
+
+ADX_MIN = 25
+
+RSI_MIN = 55
+
+RSI_MAX = 70

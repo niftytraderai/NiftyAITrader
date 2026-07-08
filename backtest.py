@@ -1,7 +1,8 @@
 import csv
 import os
+import pandas as pd
 
-from data import get_nifty_data
+from data import get_nifty_data, get_nifty_data_15m
 from indicators import add_indicators
 from strategy import generate_signal
 
@@ -47,7 +48,13 @@ def save_trade(row):
         writer.writerow(row)
 
 
-def run_backtest():
+def run_backtest(
+    ai_min=65,
+    confidence_min=65,
+    adx_min=25,
+    rsi_min=52,
+    rsi_max=75
+):
 
     print("Downloading Historical Data...")
 
@@ -55,9 +62,58 @@ def run_backtest():
 
     data, close = get_nifty_data()
 
+    htf_data = get_nifty_data_15m()
+
     data = add_indicators(data)
 
-    data = generate_signal(data, close)
+    print("After add_indicators:")
+    print(data.columns)
+
+    htf_data = add_indicators(htf_data)
+
+    print("After htf add_indicators:")
+    print(htf_data.columns)
+
+    # ==========================
+    # Multi Timeframe (Professional)
+    # ==========================
+
+    htf_trend = htf_data.copy()
+
+    htf_trend["HTF_BULLISH"] = (
+        htf_trend["EMA20"] > htf_trend["EMA50"]
+    )
+
+    htf_trend = htf_trend[["HTF_BULLISH"]]
+
+    data = pd.merge_asof(
+        data.sort_index(),
+        htf_trend.sort_index(),
+        left_index=True,
+        right_index=True,
+        direction="backward"
+    )
+
+    print(data.columns)
+    print(data.tail())
+
+    data["HTF_BULLISH"] = (
+        data["HTF_BULLISH"]
+        .fillna(False)
+        .astype(bool)
+    )
+
+    print(data[["Close", "HTF_BULLISH"]].tail(20))
+
+    data = generate_signal(
+    data,
+    close,
+    ai_min,
+    confidence_min,
+    adx_min,
+    rsi_min,
+    rsi_max
+)
 
     balance = INITIAL_BALANCE
 
@@ -240,8 +296,28 @@ def run_backtest():
     else:
         win_rate = 0
 
-    print(f"Win Rate     : {win_rate:.2f}%")                   
+    print(f"Win Rate     : {win_rate:.2f}%") 
 
+    df = pd.read_csv("trade_history.csv")
+
+    avg_win = df[df["Result"] == "WIN"]["Profit"].mean()
+    avg_loss = df[df["Result"] == "LOSS"]["Profit"].mean()
+
+    profit_factor = (
+        df[df["Result"] == "WIN"]["Profit"].sum() /
+        abs(df[df["Result"] == "LOSS"]["Profit"].sum())
+    )
+
+    print(f"\nAverage Winner : ₹{avg_win:.2f}")
+    print(f"Average Loser  : ₹{avg_loss:.2f}")
+    print(f"Profit Factor  : {profit_factor:.2f}")
+
+    return {
+        "profit": net_profit,
+        "win_rate": win_rate,
+        "trades": total_trades,
+        "profit_factor": profit_factor
+    }    
 
 if __name__ == "__main__":
     run_backtest()
