@@ -66,6 +66,15 @@ def run_backtest(
 
     data = add_indicators(data)
 
+    print(
+    data[[
+        "Close",
+        "BOS_BULL",
+        "BOS_BEAR",
+        "CHOCH_BULL",
+        "CHOCH_BEAR"
+    ]].tail(20)
+    )
     print("After add_indicators:")
     print(data.columns)
 

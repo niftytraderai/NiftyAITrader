@@ -1,28 +1,72 @@
 import streamlit as st
 import pandas as pd
-import yfinance as yf
 
-st.set_page_config(page_title="Nifty AI Trader", layout="wide")
+from data import get_nifty_data
+from indicators import add_indicators
+from strategy import generate_signal
 
-st.title("📈 Nifty AI Trader Dashboard")
+st.set_page_config(
+    page_title="Nifty AI Trader",
+    layout="wide"
+)
 
-# Live Nifty Price
-data = yf.download("^NSEI", period="5d", interval="1m")
-price = float(data["Close"].iloc[-1])
+st.title("🤖 Nifty AI Trader V5")
 
-st.metric("Nifty Live Price", f"{price:.2f}")
+st.write("Professional AI Paper Trading Dashboard")
 
-st.divider()
+data, close = get_nifty_data()
 
-try:
-    trades = pd.read_csv("trades.csv")
+data = add_indicators(data)
 
-    st.subheader("Trade History")
-    st.dataframe(trades)
+data["HTF_BULLISH"] = (
+    data["EMA20"] > data["EMA50"]
+)
 
-    total_profit = trades["Profit"].sum()
+data = generate_signal(data, close)
 
-    st.metric("Total Profit", f"₹ {total_profit:.2f}")
+latest = data.iloc[-1]
 
-except:
-    st.warning("No trades found.")
+c1, c2, c3, c4 = st.columns(4)
+
+c1.metric(
+    "NIFTY",
+    f"{latest['Close']:.2f}"
+)
+
+c2.metric(
+    "AI Score",
+    int(latest["AI_SCORE"])
+)
+
+c3.metric(
+    "Confidence",
+    int(latest["CONFIDENCE"])
+)
+
+c4.metric(
+    "Signal",
+    latest["Signal"]
+)
+
+st.subheader("Market Status")
+
+st.write("Trend :", latest["MARKET_STATE"])
+
+st.write("Entry :", latest["ENTRY_QUALITY"])
+
+st.write("Position Size :", latest["POSITION_SIZE"], "%")
+
+st.line_chart(data["Close"])
+
+st.subheader("Latest Candles")
+
+st.dataframe(
+
+    data[[
+        "Close",
+        "AI_SCORE",
+        "CONFIDENCE",
+        "Signal"
+    ]].tail(20)
+
+)

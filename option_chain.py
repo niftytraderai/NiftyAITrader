@@ -1,37 +1,36 @@
 import requests
-import pandas as pd
 
 
 def get_option_chain():
 
-    url = "https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY"
+    session = requests.Session()
 
     headers = {
         "User-Agent": (
-            "Mozilla/5.0 "
-            "(Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 "
-            "(KHTML, like Gecko) "
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/138.0 Safari/537.36"
         ),
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept": "application/json"
+        "Accept": "application/json",
+        "Accept-Language": "en-US,en;q=0.9"
     }
 
-    session = requests.Session()
-   
     # Cookie generate
-    session.get("https://www.nseindia.com", headers=headers)
+    session.get(
+        "https://www.nseindia.com",
+        headers=headers,
+        timeout=10
+    )
 
-    response = session.get(url, headers=headers)
+    response = session.get(
+        "https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY",
+        headers=headers,
+        timeout=10
+    )
 
-    print("Status:", response.status_code)
-    print("Content-Type:", response.headers.get("Content-Type"))
-    print(response.text[:300])
+    response.raise_for_status()
 
-   # data = response.json()
-
-    return response.text
+    return response.json()
 
 def get_summary():
 
@@ -39,27 +38,63 @@ def get_summary():
 
     records = data["records"]["data"]
 
-    total_call_oi = 0
-    total_put_oi = 0
+    total_call = 0
+    total_put = 0
+
+    max_call = 0
+    max_put = 0
+
+    call_strike = None
+    put_strike = None
 
     for row in records:
 
+        strike = row["strikePrice"]
+
         if "CE" in row:
-            total_call_oi += row["CE"]["openInterest"]
+
+            oi = row["CE"]["openInterest"]
+
+            total_call += oi
+
+            if oi > max_call:
+
+                max_call = oi
+                call_strike = strike
 
         if "PE" in row:
-            total_put_oi += row["PE"]["openInterest"]
 
-    pcr = total_put_oi / total_call_oi
+            oi = row["PE"]["openInterest"]
+
+            total_put += oi
+
+            if oi > max_put:
+
+                max_put = oi
+                put_strike = strike
+
+    pcr = total_put / total_call if total_call else 0
 
     return {
-        "CALL_OI": total_call_oi,
-        "PUT_OI": total_put_oi,
-        "PCR": round(pcr, 2)
+
+        "PCR": round(pcr, 2),
+
+        "CALL_OI": total_call,
+
+        "PUT_OI": total_put,
+
+        "MAX_CALL_STRIKE": call_strike,
+
+        "MAX_PUT_STRIKE": put_strike
+
     }
+
+print("Program Started")
 
 if __name__ == "__main__":
 
-    result = get_option_chain()
+    print("Inside Main")
 
-    
+    result = get_summary()
+
+    print(result)
