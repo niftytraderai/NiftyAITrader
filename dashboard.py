@@ -6,6 +6,7 @@ import os
 from data import get_nifty_data
 from indicators import add_indicators
 from strategy import generate_signal
+from live_data import get_live_price
 
 st.set_page_config(
     page_title="Nifty AI Trader",
@@ -27,6 +28,8 @@ data["HTF_BULLISH"] = (
 data = generate_signal(data, close)
 
 latest = data.iloc[-1]
+
+live_price = get_live_price()
 
 chart_data = data.tail(250)
 
@@ -64,6 +67,46 @@ fig.add_trace(
     )
 )
 
+# ==========================
+# BUY MARKERS
+# ==========================
+
+buy_data = chart_data[chart_data["BUY_MARKER"] == "BUY"]
+
+fig.add_trace(
+    go.Scatter(
+        x=buy_data.index,
+        y=buy_data["Low"] - 5,
+        mode="markers",
+        name="BUY",
+        marker=dict(
+            symbol="triangle-up",
+            size=12,
+            color="lime"
+        )
+    )
+)
+
+# ==========================
+# SELL MARKERS
+# ==========================
+
+sell_data = chart_data[chart_data["SELL_MARKER"] == "SELL"]
+
+fig.add_trace(
+    go.Scatter(
+        x=sell_data.index,
+        y=sell_data["High"] + 5,
+        mode="markers",
+        name="SELL",
+        marker=dict(
+            symbol="triangle-down",
+            size=12,
+            color="red"
+        )
+    )
+)
+
 fig.update_layout(
     height=650,
     xaxis_rangeslider_visible=False,
@@ -71,19 +114,24 @@ fig.update_layout(
     title="Live NIFTY Chart"
 )
 
-c1, c2, c3, c4 = st.columns(4)
+c1, c2, c3, c4, c5 = st.columns(5)
 
 c1.metric(
-    "NIFTY",
-    f"{latest['Close']:.2f}"
+    "Live NIFTY (Upstox)",
+    f"{live_price:.2f}"
 )
 
 c2.metric(
+    "Chart Close",
+    f"{latest['Close']:.2f}"
+)
+
+c3.metric(
     "AI Score",
     int(latest["AI_SCORE"])
 )
 
-c3.metric(
+c4.metric(
     "Confidence",
     int(latest["CONFIDENCE"])
 )
@@ -99,12 +147,12 @@ elif signal == "SELL":
 else:
     signal_text = "🟡 HOLD"
 
-c4.metric(
+c5.metric(
     "Signal",
     signal_text
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width="stretch")
 
 st.subheader("🧠 AI Decision Reason")
 

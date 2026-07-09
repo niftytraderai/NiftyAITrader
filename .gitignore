@@ -1,2 +1,17 @@
+# API Secrets
+config_api.py
+.env
+
+# Python
 __pycache__/
 *.pyc
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# CSV Reports
+trade_history.csv
+backtest_trades.csv
