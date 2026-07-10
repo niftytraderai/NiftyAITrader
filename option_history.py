@@ -1,4 +1,6 @@
+import pandas as pd
 import upstox_client
+
 from config_api import ACCESS_TOKEN
 
 configuration = upstox_client.Configuration()
@@ -9,7 +11,7 @@ api_client = upstox_client.ApiClient(configuration)
 history_api = upstox_client.HistoryApi(api_client)
 
 
-def get_option_history(instrument_key):
+def get_option_history_df(instrument_key):
 
     response = history_api.get_historical_candle_data(
         instrument_key=instrument_key,
@@ -18,4 +20,25 @@ def get_option_history(instrument_key):
         api_version="2.0"
     )
 
-    return response
+    candles = response.to_dict()["data"]["candles"]
+
+    df = pd.DataFrame(
+        candles,
+        columns=[
+            "Datetime",
+            "Open",
+            "High",
+            "Low",
+            "Close",
+            "Volume",
+            "OI"
+        ]
+    )
+
+    df["Datetime"] = pd.to_datetime(df["Datetime"])
+
+    df = df.sort_values("Datetime")
+
+    df.reset_index(drop=True, inplace=True)
+
+    return df

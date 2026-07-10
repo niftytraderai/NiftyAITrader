@@ -59,6 +59,14 @@ def generate_signal(
 
     data["Signal"] = "HOLD"
 
+    print("EMA20>EMA50 :", (data["EMA20"] > data["EMA50"]).sum())
+    print("MACD        :", (data["MACD"] > data["MACD_SIGNAL"]).sum())
+    print("RSI         :", ((data["RSI"] >= rsi_min) & (data["RSI"] <= rsi_max)).sum())
+    print("ADX         :", (data["ADX"] >= adx_min).sum())
+    print("HTF         :", (data["HTF_BULLISH"] == True).sum())
+    print("AI SCORE    :", (data["AI_SCORE"] >= ai_min).sum())
+    print("CONFIDENCE  :", (data["CONFIDENCE"] >= confidence_min).sum())
+
     buy = (
 
         (data["EMA20"] > data["EMA50"]) &

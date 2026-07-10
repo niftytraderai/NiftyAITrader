@@ -25,4 +25,7 @@ def add_market_structure(data):
         (data["EMA20"] < data["EMA50"])
     )
 
+    data["HTF_BULLISH"] = data["EMA200"] < data["Close"]
+    data["HTF_BEARISH"] = data["EMA200"] > data["Close"]
+
     return data
