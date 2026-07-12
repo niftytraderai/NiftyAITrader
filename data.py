@@ -1,6 +1,4 @@
-import yfinance as yf
 import pandas as pd
-
 
 # ==========================
 # 5 Minute Data
@@ -8,24 +6,19 @@ import pandas as pd
 
 def get_nifty_data():
 
-    ticker = yf.Ticker("^NSEI")
+    data = pd.read_csv("historical_spot.csv")
 
-    data = ticker.history(
-        period="5d",
-        interval="5m",
-        auto_adjust=True
-    )
+    data["datetime"] = pd.to_datetime(data["datetime"])
 
-    if data.empty:
-        raise Exception("Yahoo Finance returned no data.")
+    data.set_index("datetime", inplace=True)
 
-    data = data[[
-        "Open",
-        "High",
-        "Low",
-        "Close",
-        "Volume"
-    ]]
+    data.rename(columns={
+        "open": "Open",
+        "high": "High",
+        "low": "Low",
+        "close": "Close",
+        "volume": "Volume"
+    }, inplace=True)
 
     return data, data["Close"]
 
@@ -36,23 +29,27 @@ def get_nifty_data():
 
 def get_nifty_data_15m():
 
-    ticker = yf.Ticker("^NSEI")
+    data = pd.read_csv("historical_spot.csv")
 
-    data = ticker.history(
-        period="5d",
-        interval="15m",
-        auto_adjust=True
-    )
+    data["datetime"] = pd.to_datetime(data["datetime"])
 
-    if data.empty:
-        raise Exception("15 Minute data not found.")
+    data.set_index("datetime", inplace=True)
 
-    data = data[[
-        "Open",
-        "High",
-        "Low",
-        "Close",
-        "Volume"
-    ]]
+    data.rename(columns={
+        "open": "Open",
+        "high": "High",
+        "low": "Low",
+        "close": "Close",
+        "volume": "Volume"
+    }, inplace=True)
 
-    return data
+    # 1-minute data ko 15-minute candles me convert karo
+    data_15m = data.resample("15min").agg({
+        "Open": "first",
+        "High": "max",
+        "Low": "min",
+        "Close": "last",
+        "Volume": "sum"
+    }).dropna()
+
+    return data_15m

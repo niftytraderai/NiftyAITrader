@@ -2,6 +2,9 @@ import pandas as pd
 import upstox_client
 
 from config_api import ACCESS_TOKEN
+from datetime import datetime
+
+to_date = datetime.today().strftime("%Y-%m-%d")
 
 configuration = upstox_client.Configuration()
 configuration.access_token = ACCESS_TOKEN
@@ -16,7 +19,7 @@ def get_option_history_df(instrument_key):
     response = history_api.get_historical_candle_data(
         instrument_key=instrument_key,
         interval="1minute",
-        to_date="2026-07-09",
+        to_date=to_date,
         api_version="2.0"
     )
 
@@ -40,5 +43,8 @@ def get_option_history_df(instrument_key):
     df = df.sort_values("Datetime")
 
     df.reset_index(drop=True, inplace=True)
+
+    print("First Candle:", df["Datetime"].min())
+    print("Last Candle :", df["Datetime"].max())
 
     return df

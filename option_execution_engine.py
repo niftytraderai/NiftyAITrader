@@ -136,12 +136,23 @@ def simulate_option_trade(
 
     stop_loss = entry_price * (1 - stop_loss_pct / 100)
     target = entry_price * (1 + target_pct / 100)
+
+    breakeven_trigger = entry_price * 1.35
+    breakeven_active = False
+    highest_price = entry_price
+
     exit_candle = future_candles.iloc[-1]
     exit_price = float(exit_candle["Close"])
     exit_reason = "END_OF_DATA"
 
     for _, candle in future_candles.iterrows():
         current_date = candle["Datetime"].date()
+
+        highest_price = max(highest_price, float(candle["High"]))
+
+        if (not breakeven_active) and highest_price >= breakeven_trigger:
+            stop_loss = entry_price
+            breakeven_active = True
 
         if current_date > entry_date:
 
@@ -161,7 +172,12 @@ def simulate_option_trade(
         if float(candle["Low"]) <= stop_loss:
             exit_candle = candle
             exit_price = stop_loss
-            exit_reason = "STOP_LOSS"
+
+            if breakeven_active:
+                exit_reason = "BREAKEVEN"
+            else:
+                exit_reason = "STOP_LOSS"
+
             break
         if float(candle["High"]) >= target:
             exit_candle = candle

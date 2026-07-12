@@ -175,8 +175,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     try:
         run_historical_option_backtest(
-            from_date="2026-07-01",
-            to_date="2026-07-10",
+            from_date="2026-02-01",
+            to_date="2026-07-31",
         )
     except RuntimeError as error:
         LOGGER.error("Historical option backtest failed: %s", error)

@@ -94,6 +94,8 @@ def run_backtest(
 
     htf_trend = htf_trend[["HTF_BULLISH"]]
 
+    data = data.drop(columns=["HTF_BULLISH"], errors="ignore")
+
     data = pd.merge_asof(
         data.sort_index(),
         htf_trend.sort_index(),
