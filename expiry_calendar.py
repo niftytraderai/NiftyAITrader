@@ -4,6 +4,8 @@ from datetime import date, datetime, time, timedelta
 from typing import Iterable, Optional
 from zoneinfo import ZoneInfo
 
+import pandas as pd
+
 
 IST = ZoneInfo("Asia/Kolkata")
 DEFAULT_EXPIRY_WEEKDAY = 3
@@ -15,6 +17,32 @@ def _ensure_ist(signal_datetime: datetime) -> datetime:
         raise ValueError("signal_datetime must be timezone-aware.")
 
     return signal_datetime.astimezone(IST)
+
+
+def get_available_expiries(contracts_df: pd.DataFrame) -> list[date]:
+    """Return unique contract expiry dates in ascending order.
+
+    The contracts DataFrame is the authoritative source for available expiry
+    dates, including exchange schedule changes and holiday-adjusted expiries.
+
+    Args:
+        contracts_df: Option-contract metadata containing an ``expiry`` column.
+
+    Raises:
+        TypeError: If ``contracts_df`` is not a pandas DataFrame.
+        ValueError: If the expiry column is missing or contains invalid values.
+    """
+    if not isinstance(contracts_df, pd.DataFrame):
+        raise TypeError("contracts_df must be a pandas DataFrame.")
+    if "expiry" not in contracts_df.columns:
+        raise ValueError("contracts_df must contain an 'expiry' column.")
+
+    expiry_values = contracts_df["expiry"].dropna()
+    parsed_expiries = pd.to_datetime(expiry_values, errors="coerce")
+    if parsed_expiries.isna().any():
+        raise ValueError("contracts_df contains invalid expiry values.")
+
+    return sorted({expiry.date() for expiry in parsed_expiries})
 
 
 def _normalize_holiday_expiries(
@@ -38,9 +66,9 @@ def _resolve_weekly_expiry(
     """
     Resolve the weekly expiry for a candidate date.
 
-    This currently uses the standard Thursday NIFTY weekly expiry. The optional
-    holiday_adjusted_expiries argument keeps the lookup replaceable with a CSV
-    backed exchange calendar later.
+    This is the legacy fallback used only when contract metadata is unavailable.
+    The optional holiday_adjusted_expiries argument keeps the fallback
+    replaceable with a CSV-backed exchange calendar.
     """
     adjusted_expiries = _normalize_holiday_expiries(holiday_adjusted_expiries)
 
@@ -100,24 +128,31 @@ def is_after_expiry_cutoff(signal_datetime: datetime) -> bool:
     return signal_ist.time() >= DEFAULT_EXPIRY_CUTOFF
 
 
-def get_weekly_expiry(signal_datetime: datetime) -> date:
+def get_weekly_expiry(
+    signal_datetime: datetime,
+    contracts_df: Optional[pd.DataFrame] = None,
+) -> date:
     """
-    Get the correct weekly NIFTY expiry date for a signal timestamp.
+    Get the correct weekly expiry date for a signal timestamp.
 
-    Rules:
-        - Before the weekly expiry cutoff, return the current weekly expiry.
-        - On expiry day after the cutoff, return the next weekly expiry.
-        - After expiry day, return the next weekly expiry.
+    When contract metadata is provided, its available expiry dates are used as
+    the source of truth. On an available expiry date after the 15:15 IST
+    cutoff, the next available expiry is selected. Otherwise the first expiry
+    on or after the signal date is selected. Without metadata, the existing
+    weekday-based fallback is used.
 
     Args:
         signal_datetime: A timezone-aware datetime. It is converted to
             Asia/Kolkata before expiry selection.
+        contracts_df: Optional option-contract metadata with an ``expiry``
+            column.
 
     Returns:
         The selected weekly expiry date.
 
     Raises:
-        ValueError: If signal_datetime is timezone-naive.
+        ValueError: If signal_datetime is timezone-naive or no suitable
+            metadata expiry is available.
 
     Examples:
         >>> from datetime import datetime
@@ -128,6 +163,26 @@ def get_weekly_expiry(signal_datetime: datetime) -> date:
         datetime.date(2026, 7, 16)
     """
     signal_ist = _ensure_ist(signal_datetime)
+
+    if contracts_df is not None:
+        available_expiries = get_available_expiries(contracts_df)
+        if not available_expiries:
+            raise ValueError("contracts_df contains no available expiry dates.")
+
+        signal_date = signal_ist.date()
+        if signal_date in available_expiries and signal_ist.time() >= DEFAULT_EXPIRY_CUTOFF:
+            matching_expiries = [expiry for expiry in available_expiries if expiry > signal_date]
+        else:
+            matching_expiries = [expiry for expiry in available_expiries if expiry >= signal_date]
+
+        if not matching_expiries:
+            raise ValueError(
+                "No contract expiry is available on or after "
+                f"the signal date {signal_date}."
+            )
+
+        return matching_expiries[0]
+
     current_expiry = _resolve_weekly_expiry(signal_ist.date())
 
     if signal_ist.date() > current_expiry:

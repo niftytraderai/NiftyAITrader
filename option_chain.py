@@ -23,4 +23,7 @@ def get_option_contracts():
         instrument_key="NSE_INDEX|Nifty 50"
     )
 
-    return response    
+    print(type(response.data))
+    print(response.data)
+
+    return response.data   
