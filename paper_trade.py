@@ -9,6 +9,7 @@ class PaperTrader:
     def __init__(self):
         self.balance = 100000
         self.position = None
+        self.entry_time = None
         self.stop_loss = None
         self.target = None
         self.trade_no = 0
@@ -21,6 +22,7 @@ class PaperTrader:
 
         self.trade_no += 1
         self.position = price
+        self.entry_time = datetime.now()
         self.stop_loss = price * 0.995
         self.target = price * 1.01
         self.trailing_active = False
@@ -64,6 +66,8 @@ f"""
         profit = price - self.position
         self.balance += profit
 
+        trade_time = datetime.now() - self.entry_time
+
         log(f"SELL @ {price:.2f}")
         log(f"Profit  = {profit:.2f}")
         log(f"Balance = {self.balance:.2f}")
@@ -84,6 +88,8 @@ f"""
 💵 Profit   : ₹{profit:.2f}
 💰 Balance  : ₹{self.balance:.2f}
 
+⏱ Duration : {trade_time}
+
 🕒 Time     : {datetime.now().strftime("%H:%M:%S")}
 
 🤖 Version : V4
@@ -98,6 +104,7 @@ f"""
         self.stop_loss = None
         self.target = None
         self.trailing_active = False
+        self.entry_time = None
 
     def log_trade(self, action, price, profit):
         file_exists = os.path.isfile("trades.csv")
@@ -134,14 +141,17 @@ f"""
             if new_stop > self.stop_loss:
                 self.stop_loss = new_stop
                 log(f"Trailing Stop Updated : {self.stop_loss:.2f}")
+                send_telegram(f"🔄 Trailing Stop Updated : {self.stop_loss:.2f}")
 
         # Exit conditions
         if current_price <= self.stop_loss:
-            log("STOP LOSS HIT")
+            log("🛑 STOP LOSS HIT")
+            send_telegram("🛑 STOP LOSS HIT")
             self.sell(current_price)
 
         elif current_price >= self.target:
-            log("TARGET HIT")
+            log("🎯 TARGET HIT")
+            send_telegram("🎯 TARGET HIT")
             self.sell(current_price)
 
     def show_summary(self):

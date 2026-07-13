@@ -265,6 +265,7 @@ def add_indicators(data):
     data = add_vwap(data)
     data = add_volume_spike(data)
     data = add_ai_score(data)
+    data = add_htf_trend(data)
     data = add_market_structure(data)
 
     return data

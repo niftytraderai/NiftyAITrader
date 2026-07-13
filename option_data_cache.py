@@ -74,7 +74,12 @@ def get_option_history_cached(
     try:
         from option_history import get_option_history_df
 
-        dataframe = get_option_history_df(instrument_key)
+        dataframe = get_option_history_df(
+            instrument_key=instrument_key,
+            from_date=from_date,
+            to_date=to_date,
+            interval=interval,
+        )
     except Exception as error:
         raise RuntimeError(f"Could not download option history: {error}") from error
 

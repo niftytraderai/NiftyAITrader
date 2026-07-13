@@ -90,7 +90,7 @@ def run_historical_option_backtest(
     """
     try:
         LOGGER.info("Loading historical spot data from %s to %s.", from_date, to_date)
-        spot_data = get_historical_spot_data(from_date, to_date, interval="5m")
+        spot_data = get_historical_spot_data(from_date, to_date, interval="1minute")
         LOGGER.info("Adding indicators and generating signals.")
         signal_data = generate_signal(add_indicators(spot_data), spot_data["Close"])
         contracts_df = load_contracts(str(contracts_csv_path))
@@ -109,10 +109,18 @@ def run_historical_option_backtest(
     results: list[dict[str, object]] = []
 
     LOGGER.info("Processing %d entry signals.", total_signals)
+    
     for _, signal in entries.iterrows():
         signal_time = signal["Datetime"]
         signal_side = signal["signal_side"]
         spot_price = float(signal["Close"])
+
+        print("=" * 70)
+        print("Signal Time :", signal_time)
+        print("Signal Side :", signal_side)
+        print("Spot Price  :", spot_price)
+        print("STEP 1")
+        
         result_row: dict[str, object] = {
             "signal_time": signal_time,
             "signal_side": signal_side,
@@ -128,6 +136,8 @@ def run_historical_option_backtest(
                 signal_side=signal_side,
                 contracts_df=contracts_df,
             )
+            print("STEP 2")
+            print(contract)
             resolved_contracts += 1
 
             option_history = get_option_history_cached(
@@ -136,6 +146,8 @@ def run_historical_option_backtest(
                 to_date=to_date,
                 interval=option_interval,
             )
+            print("STEP 3")
+            print(option_history.head())
             execution = simulate_option_trade(
                 option_df=option_history,
                 entry_time=signal_time,
@@ -143,6 +155,8 @@ def run_historical_option_backtest(
                 target_pct=target_pct,
                 quantity=int(contract["lot_size"])
             )
+            print("STEP 4")
+            print(execution)
 
             result_row.update(contract)
             result_row.update(execution)
@@ -176,7 +190,7 @@ if __name__ == "__main__":
     try:
         run_historical_option_backtest(
             from_date="2026-02-01",
-            to_date="2026-07-31",
+            to_date="2026-07-10",
         )
     except RuntimeError as error:
         LOGGER.error("Historical option backtest failed: %s", error)
