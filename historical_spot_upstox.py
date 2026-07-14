@@ -7,80 +7,47 @@ configuration = upstox_client.Configuration()
 configuration.access_token = ACCESS_TOKEN
 
 api_client = upstox_client.ApiClient(configuration)
-
 history_api = upstox_client.HistoryApi(api_client)
 
-from datetime import datetime, timedelta
 
-def get_spot_history(from_date, to_date):
+def get_live_spot_data():
 
-    print(f"Downloading {from_date} -> {to_date}")
-
-    response = history_api.get_historical_candle_data1(
+    response = history_api.get_intra_day_candle_data(
         instrument_key="NSE_INDEX|Nifty 50",
         interval="1minute",
-        to_date=to_date,
-        from_date=from_date,
         api_version="2.0"
     )
 
-    return response
+    candles = response.data.candles
 
-if __name__ == "__main__":
+    df = pd.DataFrame(
+        candles,
+        columns=[
+            "datetime",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "oi",
+        ],
+    )
 
-    start_date = datetime(2026, 2, 1)
-    end_date = datetime(2026, 7, 12)
+    df["datetime"] = pd.to_datetime(df["datetime"])
 
-    all_data = []
+    df = df.sort_values("datetime")
 
-    current_date = start_date
+    df.rename(
+        columns={
+            "open": "Open",
+            "high": "High",
+            "low": "Low",
+            "close": "Close",
+            "volume": "Volume",
+        },
+        inplace=True,
+    )
 
-    while current_date <= end_date:
+    df.set_index("datetime", inplace=True)
 
-        from_date = current_date.strftime("%Y-%m-%d")
-
-        to_date = (current_date + timedelta(days=6)).strftime("%Y-%m-%d")
-
-        print("=" * 50)
-
-        response = get_spot_history(from_date, to_date)
-
-        candles = response.data.candles
-
-        all_data.extend(candles)
-
-        print(f"Downloaded : {len(candles)} candles")
-
-        current_date += timedelta(days=7)
-
-        print("=" * 60)
-        print(f"Total Candles : {len(all_data)}")
-
-        df = pd.DataFrame(
-            all_data,
-            columns=[
-                "datetime",
-                "open",
-                "high",
-                "low",
-                "close",
-                "volume",
-                "oi",
-            ],
-        )
-
-        # Datetime ko proper format me convert karo
-        df["datetime"] = pd.to_datetime(df["datetime"])
-
-        # Oldest -> Newest
-        df = df.sort_values("datetime")
-
-        # Index reset
-        df.reset_index(drop=True, inplace=True)
-
-        # CSV Save
-        df.to_csv("historical_spot.csv", index=False)
-
-        print("CSV Saved Successfully ✅")
-        print(df.head())
-        print(df.tail())   
+    return df

@@ -1,27 +1,15 @@
 import pandas as pd
 
-# ==========================
+from historical_spot_upstox import get_live_spot_data
+
 # 5 Minute Data
 # ==========================
 
 def get_nifty_data():
 
-    data = pd.read_csv("historical_spot.csv")
-
-    data["datetime"] = pd.to_datetime(data["datetime"])
-
-    data.set_index("datetime", inplace=True)
-
-    data.rename(columns={
-        "open": "Open",
-        "high": "High",
-        "low": "Low",
-        "close": "Close",
-        "volume": "Volume"
-    }, inplace=True)
+    data = get_live_spot_data()
 
     return data, data["Close"]
-
 
 # ==========================
 # 15 Minute Data

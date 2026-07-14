@@ -14,17 +14,27 @@ class PaperTrader:
         self.target = None
         self.trade_no = 0
         self.trailing_active = False
+        self.lot_size = 1
 
-    def buy(self, price):
+    def buy(
+        self,
+        price,
+        lot_size=1,
+        option_name="",
+        spot_price=0
+    ):
         if self.position is not None:
             log("Already in BUY position")
             return
 
         self.trade_no += 1
         self.position = price
+        self.lot_size = lot_size
+        self.option_name = option_name
+        self.spot_price = spot_price
         self.entry_time = datetime.now()
-        self.stop_loss = price * 0.995
-        self.target = price * 1.01
+        self.stop_loss = price - 5
+        self.target = price + 10
         self.trailing_active = False
 
         log(f"BUY @ {price:.2f}")
@@ -42,7 +52,13 @@ f"""
 🟢 BUY SIGNAL
 
 📌 Trade No : #{self.trade_no}
-💹 Entry    : {price:.2f}
+📈 Spot Price : {spot_price:.2f}
+
+🎯 Option     : {option_name}
+
+💹 Premium    : ₹{price:.2f}
+
+📦 Lot Size   : {lot_size}
 
 🛑 Stop Loss : {self.stop_loss:.2f}
 🎯 Target    : {self.target:.2f}
@@ -63,7 +79,7 @@ f"""
             log("No open position")
             return
 
-        profit = price - self.position
+        profit = (price - self.position) * self.lot_size
         self.balance += profit
 
         trade_time = datetime.now() - self.entry_time
@@ -83,7 +99,11 @@ f"""
 🔴 SELL SIGNAL
 
 📌 Trade No : #{self.trade_no}
-💹 Exit     : {price:.2f}
+🎯 Option : {self.option_name}
+
+💹 Exit Premium : ₹{price:.2f}
+
+📦 Lot Size : {self.lot_size}
 
 💵 Profit   : ₹{profit:.2f}
 💰 Balance  : ₹{self.balance:.2f}
@@ -113,16 +133,25 @@ f"""
             writer = csv.writer(file)
 
             if not file_exists:
-                writer.writerow(["Date", "Action", "Price", "Profit", "Balance"])
+                writer.writerow([
+                    "Date",
+                    "Action",
+                    "Option",
+                    "Premium",
+                    "Lot Size",
+                    "Profit",
+                    "Balance"
+                ])
 
             writer.writerow([
                 datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 action,
+                self.option_name,
                 round(price, 2),
+                self.lot_size,
                 round(profit, 2),
                 round(self.balance, 2)
             ])
-
     def check_exit(self, current_price):
         if self.position is None:
             return

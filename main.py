@@ -2,7 +2,7 @@ import time
 import traceback
 from option_chain import get_option_contracts
 from historical_contract_resolver import resolve_option_contract
-from option_history import get_option_history_df
+from option_history import get_live_option_data
 from indicators import add_indicators, add_htf_trend
 
 from config import CHECK_INTERVAL
@@ -45,6 +45,15 @@ while True:
 
         signal_side = None
 
+        if signal == "BUY":
+            signal_side = "BUY_ENTRY"
+
+        elif signal == "SELL":
+            signal_side = "SELL_ENTRY"
+
+        else:
+            signal_side = None
+
         if signal_side is not None:
 
             contract = resolve_option_contract(
@@ -54,13 +63,22 @@ while True:
                 contracts_df=contracts,
             )
 
+            print("\n========== OPTION CONTRACT ==========")
             print(contract)
-        
-        if signal == "BUY":
-            signal_side = "BUY_ENTRY"
 
-        elif signal == "SELL":
-            signal_side = "SELL_ENTRY"
+            option_df = get_live_option_data(
+                instrument_key=contract["instrument_key"]
+            )
+
+            print(option_df.tail())
+
+            if option_df.empty:
+                log("No option candles found.")
+                continue
+                
+            option_price = float(option_df["Close"].iloc[-1])
+
+            print(f"OPTION LTP : {option_price}")
 
         log(f"Signal: {signal}")
         log(f"Price : {price:.2f}")
@@ -83,13 +101,18 @@ while True:
 
         if signal == "BUY":
             if trader.position is None:
-                trader.buy(price)
+                trader.buy(
+                    option_price,
+                    contract["lot_size"],
+                    contract["trading_symbol"],
+                    price
+                )
             else:
                 log("BUY ignored - Position already open")
 
         elif signal == "SELL":
             if trader.position is not None:
-                trader.sell(price)
+                trader.sell(option_price)
             else:
                 log("SELL ignored - No open position")
 

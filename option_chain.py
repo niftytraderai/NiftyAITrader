@@ -17,13 +17,19 @@ def get_option_chain():
 
     return response
 
+import pandas as pd
+
 def get_option_contracts():
 
     response = options_api.get_option_contracts(
         instrument_key="NSE_INDEX|Nifty 50"
     )
 
-    print(type(response.data))
-    print(response.data)
+    contracts = pd.DataFrame([vars(x) for x in response.data])
 
-    return response.data   
+    contracts.columns = contracts.columns.str.lstrip("_")
+
+    print(type(contracts))
+    print(contracts.columns)
+
+    return contracts
