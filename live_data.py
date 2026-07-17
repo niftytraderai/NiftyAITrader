@@ -15,3 +15,13 @@ def get_live_price():
     )
 
     return response.data["NSE_INDEX:Nifty 50"].last_price
+
+def get_live_option_price(instrument_key):
+
+    response = market_api.get_ltp(
+        instrument_key=instrument_key
+    )
+
+    data = list(response.data.values())[0]
+
+    return float(data._last_price)

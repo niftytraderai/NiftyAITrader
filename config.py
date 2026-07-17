@@ -7,7 +7,7 @@ INITIAL_BALANCE = 100000
 
 # Trading Mode
 # INDEX / FUTURES / OPTIONS
-TRADING_MODE = "INDEX"
+TRADING_MODE = "OPTIONS"
 
 # Risk Management
 STOP_LOSS = 0.005      # 0.5%
@@ -17,7 +17,7 @@ MAX_TRADES_PER_DAY = 5
 MAX_DAILY_LOSS = 500
 
 # Time Settings
-CHECK_INTERVAL = 300   # 5 Minutes
+CHECK_INTERVAL = 60  # 1 Minute
 
 # Market Time
 MARKET_OPEN = "09:15"
@@ -27,7 +27,7 @@ MARKET_CLOSE = "15:30"
 SEND_TELEGRAM = True
 
 # Backtesting
-BACKTEST_MODE = "INDEX"
+BACKTEST_MODE = "OPTIONS"
 
 # ==========================
 # AI STRATEGY SETTINGS

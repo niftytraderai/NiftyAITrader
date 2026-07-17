@@ -2,8 +2,10 @@ import time
 import traceback
 from option_chain import get_option_contracts
 from historical_contract_resolver import resolve_option_contract
-from option_history import get_live_option_data
+from live_data import get_live_option_price
 from indicators import add_indicators, add_htf_trend
+from database import create_tables, save_spot_candle
+from database import create_tables
 
 from config import CHECK_INTERVAL
 from data import get_nifty_data
@@ -12,6 +14,11 @@ from paper_trade import PaperTrader
 from logger import log
 from market import is_market_open
 from telegram_bot import send_telegram
+from datetime import datetime
+
+create_tables()
+
+trader = PaperTrader()
 
 trader = PaperTrader()
 contracts = get_option_contracts()
@@ -29,6 +36,9 @@ while True:
     try:
         # Data download
         data, close = get_nifty_data()
+
+        # Save latest spot candle
+        save_spot_candle(data)
 
         # Indicators
         data = add_indicators(data)
@@ -66,17 +76,9 @@ while True:
             print("\n========== OPTION CONTRACT ==========")
             print(contract)
 
-            option_df = get_live_option_data(
-                instrument_key=contract["instrument_key"]
+            option_price = get_live_option_price(
+                contract["instrument_key"]
             )
-
-            print(option_df.tail())
-
-            if option_df.empty:
-                log("No option candles found.")
-                continue
-                
-            option_price = float(option_df["Close"].iloc[-1])
 
             print(f"OPTION LTP : {option_price}")
 
@@ -97,24 +99,63 @@ while True:
 
             last_signal = signal
 
-        trader.check_exit(price)
+        # Cooldown check
+        if trader.cooldown_until is not None:
+            if datetime.now() < trader.cooldown_until:
+                log(
+                    f"Cooldown Active until "
+                    f"{trader.cooldown_until.strftime('%H:%M:%S')}"
+                )
+                time.sleep(CHECK_INTERVAL)
+                continue
 
+        # Same candle check
+        current_candle = datetime.now().replace(second=0, microsecond=0)
+
+        if trader.last_trade_candle == current_candle:
+            log("Same candle - Entry skipped")
+            time.sleep(CHECK_INTERVAL)
+            continue
+
+        # Check exit using LIVE option premium
+        if trader.position is not None:
+
+            option_price = get_live_option_price(
+                trader.instrument_key
+            )
+
+            trader.check_exit(option_price)
+
+            if trader.cooldown_until is not None:
+                if datetime.now() < trader.cooldown_until:
+                    log("Exit completed - skipping new entry")
+                    time.sleep(CHECK_INTERVAL)
+                    continue
         if signal == "BUY":
             if trader.position is None:
                 trader.buy(
                     option_price,
                     contract["lot_size"],
                     contract["trading_symbol"],
-                    price
+                    price,
+                    contract["instrument_key"]
                 )
             else:
                 log("BUY ignored - Position already open")
 
         elif signal == "SELL":
-            if trader.position is not None:
-                trader.sell(option_price)
+            if trader.position is None:
+
+                trader.buy(
+                    option_price,
+                    contract["lot_size"],
+                    contract["trading_symbol"],
+                    price,
+                    contract["instrument_key"]
+                )
+
             else:
-                log("SELL ignored - No open position")
+                log("SELL ignored - Position already open")
 
         else:
             log("No Trade - HOLD")

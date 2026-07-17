@@ -1,6 +1,6 @@
 import csv
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from logger import log
 from telegram_bot import send_telegram
 
@@ -9,19 +9,25 @@ class PaperTrader:
     def __init__(self):
         self.balance = 100000
         self.position = None
+        self.position_type = None
+        self.option_type = None
+        self.instrument_key = ""
         self.entry_time = None
         self.stop_loss = None
         self.target = None
         self.trade_no = 0
         self.trailing_active = False
         self.lot_size = 1
+        self.last_trade_candle = None
+        self.cooldown_until = None
 
     def buy(
         self,
         price,
         lot_size=1,
         option_name="",
-        spot_price=0
+        spot_price=0,
+        instrument_key=""
     ):
         if self.position is not None:
             log("Already in BUY position")
@@ -29,10 +35,14 @@ class PaperTrader:
 
         self.trade_no += 1
         self.position = price
+        self.position_type = option_name
         self.lot_size = lot_size
         self.option_name = option_name
+        self.instrument_key = instrument_key
+        self.option_type = option_name
         self.spot_price = spot_price
         self.entry_time = datetime.now()
+        self.last_trade_candle = datetime.now().replace(second=0, microsecond=0)
         self.stop_loss = price - 5
         self.target = price + 10
         self.trailing_active = False
@@ -66,7 +76,7 @@ f"""
 💰 Balance : ₹{self.balance:.2f}
 🕒 Time    : {datetime.now().strftime("%H:%M:%S")}
 
-🤖 Version : V4
+🤖 Version : V7
 
 ━━━━━━━━━━━━━━━━━━━━
 """
@@ -83,6 +93,13 @@ f"""
         self.balance += profit
 
         trade_time = datetime.now() - self.entry_time
+
+        self.cooldown_until = datetime.now() + timedelta(minutes=2)
+
+        self.last_trade_candle = datetime.now().replace(
+            second=0,
+            microsecond=0
+        )
 
         log(f"SELL @ {price:.2f}")
         log(f"Profit  = {profit:.2f}")
@@ -112,7 +129,7 @@ f"""
 
 🕒 Time     : {datetime.now().strftime("%H:%M:%S")}
 
-🤖 Version : V4
+🤖 Version : V7
 
 ━━━━━━━━━━━━━━━━━━━━
 """
@@ -125,6 +142,11 @@ f"""
         self.target = None
         self.trailing_active = False
         self.entry_time = None
+        self.option_type = None
+        self.instrument_key = ""
+        self.option_name = ""
+        self.lot_size = 1
+        self.last_trade_candle = datetime.now().replace(second=0, microsecond=0)
 
     def log_trade(self, action, price, profit):
         file_exists = os.path.isfile("trades.csv")
